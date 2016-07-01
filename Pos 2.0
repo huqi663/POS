@@ -1,0 +1,237 @@
+
+#include "stdafx.h"
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <math.h>
+#include <windows.h> 
+#include<iomanip>
+using namespace std;
+
+class Good
+{
+	friend class Pos;
+	friend class List;
+protected:
+	string code;                                   //商品编号
+	float price;                                   //商品单价
+	float discount;                                //商品折扣
+	string name;                                   //商品名称
+	string unit;                                   //商品单位
+	int number;					                   //商品数量
+	int promotion;                                 //商品状态（是否参加买二赠一活动）
+	int vipdiscount;                               //商品会员折扣
+public:
+	Good()
+	{
+		this->code = '0';
+		this->price = 0;
+		this->discount = 1;
+		this->name = '0';
+		this->unit = '0';
+		this->number = 0;
+		this->promotion = 0;
+	}
+
+	float countsingle(){
+        float single;
+		if (promotion == 1 && number >= 3)
+		{
+			single = (number - 1) * price;
+		}
+		else if(promotion == 0 && number >= 0)
+		{
+            single = number * price * discount;
+		}
+		else
+		{
+			single = 0;
+		}
+		return single;
+	}
+
+	float countdis(){
+		float dis;
+		if (promotion == 1 && number >= 3)
+		{
+			dis = price;
+		}
+		else if (promotion == 0 && number >= 0)
+		{
+            dis = number *  price * (1 - discount);
+		}
+		else
+		{
+			dis = 0;
+		}
+		return dis;
+	}
+	int present(){
+		if (promotion == 1 && number >= 3) return 1;
+		else return 0;
+	}
+};
+
+class List{
+	friend class Pos;
+	friend class Good;
+private:
+	string name[100];
+	int number[100];
+	float price[100];
+	float total[100];
+	float save[100];
+	string unit[100];
+	int present[10];
+public:
+	List(Good good[], int n){
+		for (int i = 0; i <= n; i++)
+		{
+			name[i] = good[i].name;
+			number[i] = good[i].number;
+			price[i] = good[i].price;
+			total[i] = good[i].countsingle();
+			save[i] = good[i].countdis();
+			unit[i] = good[i].unit;
+			present[i] = good[i].present();
+
+		}
+	}
+	List(){
+		for (int i = 0; i <= 100; i++)
+		{
+			name[i] = '0';
+			number[i] = 0;
+			price[i] = 0.0;
+			total[i] = 0.0;
+			save[i] = 0.0;
+			unit[i] = '0';
+			present[i] = 0;
+		}
+	}
+	float getTotal(int n){
+		float Total = 0.0;
+		for (int i = 0; i <= n; i++)
+			Total += total[i];
+		return Total;
+	}
+	float getSave(int n){
+		float Save = 0.0;
+		for (int i = 0; i <= n; i++)
+			Save += save[i];
+		return Save;
+	}
+};
+
+class Pos{
+	friend class List;
+	friend class Good;
+private:
+	int p;
+	int n = 0;
+	Good good[100];
+	string thiscode;
+	float sum;
+	float dsum;
+	int goodnumber;
+	int total;
+public:
+	Pos(){}
+	void load()
+	{
+		ifstream a("商品索引.txt", ios::in);
+		if (!a)
+		{
+			cout << "没有找到商品索引文件。\n";
+			system("pause");
+		}
+		a >> goodnumber;
+		for (int i = 0; i < goodnumber; i++)
+		{
+			a >> good[i].code;
+			a >> good[i].name;
+			a >> good[i].unit;
+			a >> good[i].price;
+			a >> good[i].discount;
+			a >> good[i].promotion;
+			if (good[i].discount != 1 && good[i].promotion == 1)
+			{
+				cout << good[i].code << "商品信息出错。\n";
+				system("pause");
+				exit(0);
+			}
+		}
+
+		ifstream b("商品列表.txt", ios::in);
+		if (!b)
+		{
+			cout << "没有找到商品列表文件。\n";
+			system("pause");
+		}
+		b >> total;
+		for (int j = 0; j < total; j++)
+		{
+			p = 0;
+			b >> thiscode;
+			for (int k = 0; k < goodnumber; k++)
+			{
+				if (good[k].code == thiscode)
+				{
+					good[k].number = good[k].number + 1;
+					p = 1;
+				}
+			}
+			if (p == 0)
+			{
+				cout << thiscode << "该商品不存在。\n";
+			}
+		}
+	}
+	void show()
+	{
+		List list(good, goodnumber);
+		cout << "***商品清单***";
+		for (int l = 0; l < goodnumber; l++)
+		{
+			cout << "\n名称：" << list.name[l] << ",";
+			cout << "数量：" << list.number[l] << list.unit[l] << ",";
+			cout << "单价：" << list.price[l] << "（元），";
+			cout << "小计：" << list.total[l] << "（元）";
+
+		}
+		cout << "\n----------------------";
+		for (int m = 0; m < goodnumber; m++)
+		{
+			if (n < list.present[m])
+				n = list.present[m];
+		}
+		if (n == 1)
+		{
+			cout << "\n挥泪赠送商品：";
+			for (int o = 0; o < goodnumber; o++)
+			{
+				if (list.present[o] == 1)
+				{
+					cout << "\n名称：" << list.name[o] << ",";
+					cout << "数量：1" << list.unit[o] << ",";
+				}
+			}
+		}
+		cout << "\n----------------------";
+		cout << "\n总计：" << list.getTotal(goodnumber) << "（元）";
+		cout << "\n节省：" << list.getSave(goodnumber) << "（元）";
+		SYSTEMTIME sys;
+		GetLocalTime(&sys);
+		cout << "\n打印时间：" << sys.wYear << "年" << sys.wMonth << "月" << sys.wDay << "日	";
+		cout << sys.wHour << ":" << sys.wMinute << ":" << setw(2) << setfill('0') << sys.wSecond;
+	}
+};
+
+int main(){
+	Pos test;
+	test.load();
+	test.show();
+	int a;
+	cin >> a;
+	return 0;
+}
