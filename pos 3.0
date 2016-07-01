@@ -1,0 +1,366 @@
+#include "stdafx.h"
+#include <iostream>
+#include <string>
+#include <fstream>
+#include <math.h>
+#include <windows.h> 
+#include<iomanip>
+using namespace std;
+
+class Good
+{
+	friend class Pos;
+	friend class List;
+	friend class VIP;
+protected:
+	string code;                                   //商品编号
+	float price;                                   //商品单价
+	float discount;                                //商品折扣
+	string name;                                   //商品名称
+	string unit;                                   //商品单位
+	int number;					                   //商品数量
+	int promotion;                                 //商品状态（是否参加买二赠一活动）
+	float vipdiscount;                               //商品会员折扣
+public:
+	Good()
+	{
+		this->code = '0';
+		this->price = 0;
+		this->discount = 1;
+		this->name = '0';
+		this->unit = '0';
+		this->number = 0;
+		this->promotion = 0;
+		this->vipdiscount = 0;
+	}
+
+	float countsingle(int vip){
+        float single;
+		if (vip == 1 && number >= 0 )
+		{
+			single = number * price * discount * vipdiscount;
+		}
+		if (vip == 0)
+		{
+			if (promotion == 0 && number >= 0 || promotion == 1 && number <= 2 && number >= 0)
+			{
+				single = number * price * discount;
+			}
+			if (promotion == 1 && number > 2)
+			{
+				int count1,count2;
+				count1 = number / 3;
+				count2 = number % 3;
+				single = count1 * price * 2 + count2 * price * discount;
+			}
+		}
+		/*else
+		{
+			cout << "wrong!!please put again!!";
+			single = 0;
+		}*/
+		return single;
+	}
+
+	float countdis(int vip){
+		float dis;
+		if (vip == 1 && number >= 0)
+		{
+			dis = number * price * (1 - discount * vipdiscount);
+		}
+		if (vip == 0)
+		{
+			if (promotion == 0 && number >= 0 || promotion == 1 && number <= 2 && number >= 0)
+			{
+				dis = number * price * (1 - discount);
+			}
+			if (promotion == 1 && number > 2)
+			{
+				int count1, count2;
+				count1 = number / 3;
+				count2 = number % 3;
+				dis = count1 * price * 1 + count2 * price * (1 - discount);
+			}
+		}
+		/*else
+		{
+			cout << "wrong!!please put again!!";
+			dis = 0;
+		}*/
+
+		/*if (promotion == 1 && number >= 3)
+		{
+			dis = price;
+		}
+		else if (promotion == 0 && number >= 0)
+		{
+            dis = number *  price * (1 - discount);
+		}
+		else
+		{
+			dis = 0;
+		}*/
+		return dis;
+	}
+	int present(int vip){
+		if (vip == 1) return 0;
+		if (vip == 0)
+		{
+		   if (promotion == 1 && number >= 3) return number/3;
+		   else return 0;
+		}
+
+	}
+};
+
+class VIP{
+	friend class List;
+	friend class Good;
+	friend class Pos;
+private:
+	string vname;
+	int isvip;
+	int integral;
+public:
+	VIP(){
+
+			vname = '0';
+			isvip = 0;
+			integral = 0;
+
+	}
+	int getintegral(int x){
+				if (integral >= 0 && integral <= 200)
+				{
+					int a = x / 5;
+					integral += a * 1;
+				}
+				if (integral > 200 && integral <= 500)
+				{
+					int a = x / 5;
+					integral += a * 3;
+				}
+				if (integral > 500)
+				{
+					int a = x / 5;
+					integral += a * 5;
+				}
+		return integral;
+	}
+};
+
+class List{//类目
+	friend class VIP;
+	friend class Pos;
+	friend class Good;
+private:
+	string name[100];
+	int number[100];
+	float price[100];
+	float total[100];
+	float save[100];
+	string unit[100];
+	int present[10];
+	string user;
+	int judgevip;
+public:
+	List(string judge, Good good[], int n){
+		for (int i = 0; i<n; i++)
+		{
+			judgevip = 0;
+			name[i] = good[i].name;
+			number[i] = good[i].number;
+			price[i] = good[i].price;
+			total[i] = good[i].countsingle(judgevip);
+			save[i] = good[i].countdis(judgevip);
+			unit[i] = good[i].unit;
+			present[i] = good[i].present(judgevip);
+			user = judge;
+		}
+	}
+	List(){
+		for (int i = 0; i<100; i++)
+		{
+			name[i] = '0';
+			number[i] = 0;
+			price[i] = 0.0;
+			total[i] = 0.0;
+			save[i] = 0.0;
+			unit[i] = '0';
+			present[i] = 0;
+			user = '0';
+			judgevip = 0;
+		}
+	}
+	float getTotal(int n, int usernumber, VIP a[], Good good[]){
+		float Total = 0.0;
+		for (int i = 0; i<usernumber; i++)
+		{
+			if (a[i].vname == user){ judgevip = a[i].isvip; }
+		}
+		for (int i = 0; i<n; i++)
+		{
+			total[i] = good[i].countsingle(judgevip);
+			present[i] = good[i].present(judgevip);
+			Total += total[i];
+		}
+		return Total;
+	}
+	float getSave(int n, int usernumber, VIP a[], Good good[]){
+		float Save = 0.0;
+		for (int i = 0; i<usernumber; i++)
+		{
+			if (a[i].vname == user){ judgevip = a[i].isvip; }
+		}
+		for (int i = 0; i<n; i++)
+		{
+			save[i] = good[i].countdis(judgevip);
+			Save += save[i];
+		}
+		return Save;
+	}
+};
+
+class Pos{
+	friend class List;
+	friend class Good;
+	friend class VIP;
+private:
+	string thisuser;
+	int p;
+	int n = 0;
+	Good good[100];
+	VIP vip[100];
+	string thiscode;
+	float sum;
+	int goodnumber;
+	int total;
+	int usernumber;
+public:
+	Pos(){}
+	void load()
+	{
+		ifstream a("商品索引.txt", ios::in);
+		if (!a)
+		{
+			cout << "没有找到商品索引文件。\n";
+			system("pause");
+		}
+		a >> goodnumber;
+		for (int i = 0; i < goodnumber; i++)
+		{
+			a >> good[i].code;
+			a >> good[i].name;
+			a >> good[i].unit;
+			a >> good[i].price;
+			a >> good[i].discount;
+			a >> good[i].promotion;
+			a >> good[i].vipdiscount;
+		}
+
+		ifstream c("会员清单.txt", ios::in);
+		if (!c)
+		{
+			cout << "没有找到会员清单文件。\n";
+			system("pause");
+		}
+		c >> usernumber;
+		for (int q = 0; q < usernumber; q++)
+		{
+			c >> vip[q].vname;
+			c >> vip[q].isvip;
+			c >> vip[q].integral;
+		}
+
+		ifstream b("商品列表.txt", ios::in);
+		if (!b)
+		{
+			cout << "没有找到商品列表文件。\n";
+			system("pause");
+		}
+		b >> thisuser;
+		b >> total;
+		for (int j = 0; j < total; j++)
+		{
+			p = 0;
+			b >> thiscode;
+			for (int k = 0; k < goodnumber; k++)
+			{
+				if (good[k].code == thiscode)
+				{
+					good[k].number = good[k].number + 1;
+					p = 1;
+				}
+			}
+			if (p == 0)
+			{
+				cout << thiscode << "该商品不存在。\n";
+			}
+		}
+	}
+	void show()
+	{
+		SYSTEMTIME sys;
+		GetLocalTime(&sys);
+		List list(thisuser, good, goodnumber);
+		cout << "***商店购物清单***";
+		cout << "\n会员编号：" << thisuser << "	会员积分：";
+		sum = list.getTotal(goodnumber, usernumber, vip, good);
+		p = 0;
+		for (int r = 0; r < usernumber; r++)
+		{
+			if (thisuser == vip[r].vname)
+			{
+				cout << vip[r].getintegral( sum ) << "分";
+				p = 1;
+			}
+		}
+		if (p == 0)
+		{
+			cout << "无";
+		}
+		cout << "\n----------------------";
+		cout << "\n打印时间：" << setw(4) << setfill('0') << sys.wYear << "年" << setw(2) << setfill('0') << sys.wMonth << "月" << setw(2) << setfill('0') << sys.wDay << "日	";
+		cout << setw(2) << setfill('0') << sys.wHour << ":" << setw(2) << setfill('0') << sys.wMinute << ":" << setw(2) << setfill('0') << sys.wSecond;
+		cout << "\n----------------------";
+		for (int l = 0; l < goodnumber; l++)
+		{
+			if (list.number[l] != 0)
+			{
+				cout << "\n名称：" << list.name[l] << ",";
+				cout << "数量：" << list.number[l] << list.unit[l] << ",";
+				cout << "单价：" << list.price[l] << "（元），";
+				cout << "小计：" << list.total[l] << "（元）";
+			}
+		}
+		cout << "\n----------------------";
+		for (int m = 0; m < goodnumber; m++)
+		{
+			if (n < list.present[m])
+				n = list.present[m];
+		}
+		if (n == 1)
+		{
+			cout << "\n挥泪赠送商品：";
+			for (int o = 0; o < goodnumber; o++)
+			{
+				if (list.present[o] >= 1)
+				{
+					cout << "\n名称：" << list.name[o] << ",";
+					cout << "数量" <<list.present[o]<< list.unit[o] << ",";
+				}
+			}
+		}
+		cout << "\n总计：" << sum << "（元）";
+		cout << "\n节省：" << list.getSave(goodnumber, usernumber, vip, good) << "（元）";
+	}
+};
+
+int main(){
+	Pos test;
+	test.load();
+	test.show();
+	int a;
+	cin >> a;
+	return 0;
+}
